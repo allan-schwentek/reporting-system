@@ -1,0 +1,232 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Relatorios</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <h1 id="app-title">Sistema de Relatorios</h1>
+          <p id="app-subtitle">Monte topicos, anexe imagens e exporte o PDF final formatado.</p>
+          <div class="report-title-row">
+            <strong id="current-report-name">Relatorio selecionado: -</strong>
+          </div>
+        </div>
+        <button id="config-modal-open-btn" class="icon-btn" type="button" aria-label="Abrir configuracoes">&#9881;</button>
+      </div>
+
+      <div class="brand-controls">
+        <img id="brand-logo-preview" class="brand-logo-preview" alt="Logo">
+        <button id="brand-logo-btn" class="btn" type="button">Editar logo</button>
+        <button id="cover-modal-open-btn" class="btn" type="button">Editar capa</button>
+        <input id="brand-logo-input" type="file" accept="image/*" hidden>
+      </div>
+
+      <div class="hero-actions">
+        <button id="export-btn" class="btn btn-accent">Exportar PDF</button>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Relatorios</h2>
+        <label for="new-report-name">Novo relatorio</label>
+        <div class="actions">
+          <input id="new-report-name" type="text" placeholder="Ex.: Relatorio 1">
+          <button id="create-report-btn" type="button" class="btn btn-primary">Criar</button>
+        </div>
+        <p id="reports-status" class="reports-status"></p>
+        <div id="reports-list" class="reports-list"></div>
+      </article>
+
+      <article class="panel">
+        <h2>Topico</h2>
+        <form id="topic-form">
+          <label for="title">Titulo</label>
+          <input id="title" name="title" type="text" required>
+
+          <label for="content">Descricao</label>
+          <textarea id="content" name="content" rows="6" placeholder="Detalhes do topico..."></textarea>
+
+          <label>Imagens</label>
+          <div id="dropzone" class="dropzone" tabindex="0">
+            Arraste imagens aqui ou use CTRL+V
+            <small>Clique para selecionar arquivos</small>
+            <input id="image-input" type="file" accept="image/*" multiple hidden>
+          </div>
+
+          <div id="queued-images" class="images"></div>
+          <div id="existing-images" class="images"></div>
+
+          <div class="actions">
+            <button type="submit" id="save-btn" class="btn btn-primary">Adicionar</button>
+            <button type="button" id="new-btn" class="btn">Novo</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel">
+        <h2>Topicos cadastrados</h2>
+        <ul id="topics-list" class="topics-list"></ul>
+      </article>
+    </section>
+  </main>
+
+  <div id="cover-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Editar capa do PDF</h2>
+        <button id="cover-modal-close-btn" class="btn" type="button">Fechar</button>
+      </div>
+
+      <div class="switch-row">
+        <label class="switch">
+          <input id="cover-enabled" type="checkbox" checked>
+          <span class="slider"></span>
+        </label>
+        <span id="cover-enabled-label">Capa ligada</span>
+      </div>
+
+      <label for="cover-title">Titulo da capa</label>
+      <input id="cover-title" type="text" value="Relatorio Tecnico">
+
+      <label for="cover-subtitle">Subtitulo da capa</label>
+      <input id="cover-subtitle" type="text" value="Resumo executivo">
+
+      <label for="cover-text">Texto da capa</label>
+      <textarea id="cover-text" rows="3">Descreva aqui o contexto e os objetivos deste relatorio.</textarea>
+
+      <label for="cover-note">Selo/observacao</label>
+      <input id="cover-note" type="text" value="DOCUMENTO CONFIDENCIAL">
+
+      <label for="cover-footer">Rodape da capa</label>
+      <input id="cover-footer" type="text" value="Sua Organizacao | www.seusite.com">
+
+      <div class="actions">
+        <button id="save-cover-btn" type="button" class="btn btn-primary">Salvar capa</button>
+        <button id="reset-cover-btn" type="button" class="btn">Restaurar padrao</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="config-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-config-modal="true"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Configuracoes do sistema</h2>
+        <button id="config-modal-close-btn" class="btn" type="button">Fechar</button>
+      </div>
+
+      <div class="config-grid">
+        <section class="config-card">
+          <h3>Tema da interface</h3>
+          <p>Personalize as cores do app.</p>
+          <div class="color-grid">
+            <label for="cfg-ui-primary">Primaria</label>
+            <input id="cfg-ui-primary" type="color">
+            <label for="cfg-ui-accent">Destaque</label>
+            <input id="cfg-ui-accent" type="color">
+            <label for="cfg-ui-danger">Perigo</label>
+            <input id="cfg-ui-danger" type="color">
+            <label for="cfg-ui-ink">Texto</label>
+            <input id="cfg-ui-ink" type="color">
+            <label for="cfg-ui-muted">Texto secundario</label>
+            <input id="cfg-ui-muted" type="color">
+            <label for="cfg-ui-line">Borda</label>
+            <input id="cfg-ui-line" type="color">
+            <label for="cfg-ui-card">Cartao</label>
+            <input id="cfg-ui-card" type="color">
+            <label for="cfg-ui-bg-start">Fundo inicio</label>
+            <input id="cfg-ui-bg-start" type="color">
+            <label for="cfg-ui-bg-end">Fundo fim</label>
+            <input id="cfg-ui-bg-end" type="color">
+            <label for="cfg-ui-hero-start">Cabecalho inicio</label>
+            <input id="cfg-ui-hero-start" type="color">
+            <label for="cfg-ui-hero-end">Cabecalho fim</label>
+            <input id="cfg-ui-hero-end" type="color">
+          </div>
+        </section>
+
+        <section class="config-card">
+          <h3>Tema do PDF</h3>
+          <p>Controle visual da capa, faixas e tipografia no PDF.</p>
+          <div class="color-grid">
+            <label for="cfg-pdf-primary">Primaria PDF</label>
+            <input id="cfg-pdf-primary" type="color">
+            <label for="cfg-pdf-dark">Cor escura PDF</label>
+            <input id="cfg-pdf-dark" type="color">
+            <label for="cfg-pdf-soft">Cor clara PDF</label>
+            <input id="cfg-pdf-soft" type="color">
+            <label for="cfg-pdf-text">Texto PDF</label>
+            <input id="cfg-pdf-text" type="color">
+            <label for="cfg-pdf-footer-text">Rodape PDF</label>
+            <input id="cfg-pdf-footer-text" type="color">
+          </div>
+        </section>
+
+        <section class="config-card">
+          <h3>Preferencias gerais</h3>
+          <label for="cfg-app-title">Titulo da aplicacao</label>
+          <input id="cfg-app-title" type="text" maxlength="80">
+          <label for="cfg-app-subtitle">Subtitulo da aplicacao</label>
+          <input id="cfg-app-subtitle" type="text" maxlength="180">
+          <label for="cfg-pdf-prefix">Prefixo do arquivo PDF</label>
+          <input id="cfg-pdf-prefix" type="text" maxlength="50" placeholder="relatorio">
+          <div class="switch-row">
+            <label class="switch">
+              <input id="cfg-show-logo" type="checkbox" checked>
+              <span class="slider"></span>
+            </label>
+            <span id="cfg-show-logo-label">Mostrar logo na interface</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="actions">
+        <button id="config-save-btn" type="button" class="btn btn-primary">Salvar configuracoes</button>
+        <button id="config-reset-btn" type="button" class="btn">Restaurar padrao</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ui-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-ui-modal="true"></div>
+    <div class="modal-content modal-content-sm">
+      <div class="modal-header">
+        <h2 id="ui-modal-title">Aviso</h2>
+      </div>
+      <p id="ui-modal-message" class="modal-message"></p>
+      <input id="ui-modal-input" class="hidden" type="text">
+      <div class="actions">
+        <button id="ui-modal-cancel" type="button" class="btn">Cancelar</button>
+        <button id="ui-modal-confirm" type="button" class="btn btn-primary">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="security-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-security-modal="true"></div>
+    <div class="modal-content modal-content-sm security-modal-card">
+      <div class="modal-header">
+        <h2 id="security-modal-title">Seguranca do relatorio</h2>
+      </div>
+      <p id="security-modal-message" class="modal-message"></p>
+      <input id="security-modal-input" type="text" class="hidden" placeholder="Informe a chave de 13 digitos">
+      <div id="security-key-box" class="security-key-box hidden"></div>
+      <div class="actions">
+        <button id="security-modal-copy" type="button" class="btn hidden">Copiar chave</button>
+        <button id="security-modal-cancel" type="button" class="btn">Cancelar</button>
+        <button id="security-modal-confirm" type="button" class="btn btn-primary">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
