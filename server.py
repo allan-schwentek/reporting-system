@@ -347,6 +347,33 @@ def get_topics(report_id: str):
     return jsonify(report["topics"])
 
 
+@app.put("/api/reports/<report_id>/topics/order")
+def reorder_topics(report_id: str):
+    body = request.get_json(silent=True) or {}
+    topic_ids = body.get("topic_ids")
+    if not isinstance(topic_ids, list):
+        return jsonify({"error": "A lista topic_ids e obrigatoria."}), 400
+
+    data = load_data()
+    report = find_report(data, report_id)
+    if report is None:
+        return jsonify({"error": "Relatorio nao encontrado."}), 404
+    key_error = require_report_key(report)
+    if key_error:
+        return key_error
+
+    topics = report["topics"]
+    current_ids = [topic["id"] for topic in topics]
+    if len(topic_ids) != len(current_ids) or set(topic_ids) != set(current_ids):
+        return jsonify({"error": "A ordenacao enviada e invalida para os topicos atuais."}), 400
+
+    index_by_id = {topic["id"]: topic for topic in topics}
+    report["topics"] = [index_by_id[topic_id] for topic_id in topic_ids]
+    report["updated_at"] = datetime.utcnow().isoformat() + "Z"
+    save_data(data)
+    return jsonify(report["topics"])
+
+
 @app.get("/api/reports/<report_id>/settings")
 def get_report_settings(report_id: str):
     data = load_data()

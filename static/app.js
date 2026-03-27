@@ -8,6 +8,7 @@ const exportBtn = document.getElementById("export-btn");
 const currentReportName = document.getElementById("current-report-name");
 const reportsList = document.getElementById("reports-list");
 const reportsStatus = document.getElementById("reports-status");
+const reportSearchInput = document.getElementById("report-search");
 const newReportNameInput = document.getElementById("new-report-name");
 const createReportBtn = document.getElementById("create-report-btn");
 const brandLogoBtn = document.getElementById("brand-logo-btn");
@@ -84,6 +85,8 @@ let securityModalResolver = null;
 let securityModalCurrentKey = "";
 let appSettings = null;
 let configSettingsBackup = null;
+let draggedTopicId = null;
+let reportsFilterTerm = "";
 const reportKeys = {};
 
 const DEFAULT_COVER_SETTINGS = {
@@ -534,7 +537,17 @@ function updateCurrentReportName() {
 
 function renderReports() {
   reportsList.innerHTML = "";
-  reports.forEach((report) => {
+  const filteredReports = reports.filter((report) =>
+    normalizeText(report.name).includes(normalizeText(reportsFilterTerm))
+  );
+
+  if (reports.length && !filteredReports.length) {
+    reportsStatus.textContent = "Nenhum relatorio encontrado para o filtro informado.";
+  } else if (reports.length) {
+    reportsStatus.textContent = "";
+  }
+
+  filteredReports.forEach((report) => {
     const card = document.createElement("div");
     card.className = `report-card${report.id === selectedReportId ? " active" : ""}`;
     card.innerHTML = `
@@ -692,6 +705,8 @@ function renderTopics() {
   topics.forEach((topic) => {
     const li = document.createElement("li");
     li.className = "topic-item";
+    li.dataset.topicId = topic.id;
+    li.setAttribute("draggable", "true");
     li.innerHTML = `
       <h3>${escapeHtml(topic.title)}</h3>
       <p>${escapeHtml((topic.content || "").slice(0, 150) || "Sem descricao.")}</p>
@@ -702,6 +717,42 @@ function renderTopics() {
     `;
     topicsList.appendChild(li);
   });
+}
+
+function getDragAfterElement(container, y) {
+  const elements = [...container.querySelectorAll(".topic-item:not(.dragging)")];
+  let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+
+  for (const element of elements) {
+    const box = element.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      closest = { offset, element };
+    }
+  }
+  return closest.element;
+}
+
+async function persistTopicsOrder() {
+  if (!selectedReportId) return;
+  const topicIds = [...topicsList.querySelectorAll(".topic-item")].map((item) => item.dataset.topicId);
+  if (!topicIds.length) return;
+
+  const response = await fetchWithReportAuth(
+    `/api/reports/${selectedReportId}/topics/order`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic_ids: topicIds }),
+    }
+  );
+  if (!response || !response.ok) {
+    await uiAlert("Nao foi possivel salvar a nova ordem dos topicos.");
+    await fetchTopics();
+    return;
+  }
+  topics = await response.json();
+  renderTopics();
 }
 
 function resetForm() {
@@ -827,6 +878,39 @@ topicsList.addEventListener("click", async (event) => {
     if (editingId === removeId) resetForm();
   }
 });
+
+topicsList.addEventListener("dragstart", (event) => {
+  const item = event.target.closest(".topic-item");
+  if (!item || !selectedReportId) return;
+  draggedTopicId = item.dataset.topicId;
+  item.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+});
+
+topicsList.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  if (!draggedTopicId || !selectedReportId) return;
+  const dragging = topicsList.querySelector(".topic-item.dragging");
+  if (!dragging) return;
+  const afterElement = getDragAfterElement(topicsList, event.clientY);
+  if (!afterElement) {
+    topicsList.appendChild(dragging);
+  } else {
+    topicsList.insertBefore(dragging, afterElement);
+  }
+});
+
+topicsList.addEventListener("drop", async (event) => {
+  event.preventDefault();
+  if (!draggedTopicId || !selectedReportId) return;
+  await persistTopicsOrder();
+});
+
+topicsList.addEventListener("dragend", () => {
+  draggedTopicId = null;
+  topicsList.querySelectorAll(".topic-item.dragging").forEach((item) => item.classList.remove("dragging"));
+});
+
 reportsList.addEventListener("click", async (event) => {
   const openId = event.target.dataset.openReport;
   const renameId = event.target.dataset.renameReport;
@@ -1188,6 +1272,11 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+reportSearchInput.addEventListener("input", () => {
+  reportsFilterTerm = reportSearchInput.value.trim();
+  renderReports();
+});
+
 async function bootstrap() {
   await loadAppSettings();
   await refreshBrandLogo();
@@ -1196,3 +1285,10 @@ async function bootstrap() {
 
 bootstrap();
 
+
+function normalizeText(value) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}

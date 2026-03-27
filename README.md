@@ -61,6 +61,10 @@ python -m waitress --host 0.0.0.0 --port 5222 server:app
 Aplicacao Flask para criar relatorios estruturados com topicos, imagens e exportacao em PDF.
 
 ## Funcionalidades
+
+- Buscar relatorio em tempo real por nome.
+- Reordenar topicos por arrastar e soltar (ordem persistida).
+- Suporte a emoji e itens com marcador (`- `) na descricao do topico no PDF.
 - Multiplos relatorios protegidos por chaves de acesso de 13 digitos.
 - CRUD de topicos com upload de imagens (seletor, arrastar e soltar, colar).
 - Configuracao de capa do PDF por relatorio.

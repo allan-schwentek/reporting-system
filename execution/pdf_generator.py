@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import io
+from html import escape
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -11,7 +12,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 DEFAULT_PDF_THEME = {
@@ -99,6 +100,43 @@ def _sanitize_pdf_text(value: str | None, unicode_capable: bool = False) -> str:
         return clean_text
     # Fallback quando nao houver fonte Unicode para emoji.
     return clean_text.encode("cp1252", "replace").decode("cp1252")
+
+
+def _render_line_with_emoji_font(line: str) -> str:
+    if not line:
+        return ""
+
+    if not RUNTIME_FONTS["unicode"]:
+        return escape(_sanitize_pdf_text(line, unicode_capable=False))
+
+    out = []
+    for char in line:
+        if char in ("\x00", "\x01", "\x02", "\x03", "\x04", "\x05", "\x06", "\x07", "\x08"):
+            continue
+        if char in ("\uFE0F", "\u200D"):
+            continue
+        if _is_emoji_char(char):
+            out.append(f'<font name="{RUNTIME_FONTS["regular"]}">{escape(char)}</font>')
+        else:
+            out.append(escape(char))
+    return "".join(out)
+
+
+def _format_topic_content(content: str) -> str:
+    raw = (content or "").replace("\r\n", "\n").replace("\r", "\n")
+    lines = raw.split("\n")
+    formatted = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            item = stripped[2:].strip()
+            bullet_text = _render_line_with_emoji_font(item)
+            formatted.append(f"&nbsp;&nbsp;&nbsp;&nbsp;&bull; {bullet_text}")
+        else:
+            formatted.append(_render_line_with_emoji_font(line))
+
+    return "<br/>".join(formatted)
 
 
 def _safe_hex(value: str | None, fallback: str) -> str:
@@ -321,6 +359,7 @@ def generate_report_pdf(
         story.append(Spacer(1, 0.3 * cm))
         story.append(Paragraph(" ", styles["cover_meta"]))
         story.append(Spacer(1, 1.2 * cm))
+        story.append(PageBreak())
     else:
         story.append(Spacer(1, 0.5 * cm))
         story.append(Paragraph(safe_report_title, styles["topic_title"]))
@@ -345,7 +384,7 @@ def generate_report_pdf(
 
     for index, topic in enumerate(topics, start=1):
         topic_title = _sanitize_pdf_text(topic.get("title", f"Topico {index}"), unicode_capable=True)
-        topic_content = _sanitize_pdf_text(topic.get("content") or "", unicode_capable=False).replace("\n", "<br/>")
+        topic_content = _format_topic_content(topic.get("content") or "")
         block = [
             Paragraph(f"TOPICO {index:02d}", styles["section_badge"]),
             _build_topic_title_flowable(topic_title, styles, doc.width),
